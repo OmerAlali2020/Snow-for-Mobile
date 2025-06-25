@@ -13,52 +13,42 @@ import {
   renderList
 } from './render.js';
 
-// חישוב תאריכים
-const now = new Date();
-const weekAgo = new Date(now);
-weekAgo.setDate(now.getDate() - 7);
-const yesterday = new Date(now);
-yesterday.setDate(now.getDate() - 1);
-
-// לוגיקת סינון לפי טווח תאריכים מתוך רשימת תקלות
-function filterByDatePreset(items, dateField, preset) {
-  if (!preset) return items;
-  const end = new Date();
-  let start;
+// מסתייע ביצירת טווח מ־datePreset
+function computeRange(preset) {
+  const now = new Date();
+  let start, end = new Date(now);
   switch (preset) {
     case 'today':
-      start = new Date(end);
-      start.setHours(0, 0, 0, 0);
+      start = new Date(now);
+      start.setHours(0,0,0,0);
       break;
     case 'yesterday':
-      start = new Date(end);
-      start.setDate(end.getDate() - 1);
-      start.setHours(0, 0, 0, 0);
-      const endY = new Date(start);
-      endY.setHours(23, 59, 59, 999);
-      return filterByDateRange(items, dateField, start, endY);
+      start = new Date(now);
+      start.setDate(now.getDate() - 1);
+      start.setHours(0,0,0,0);
+      end = new Date(start);
+      end.setHours(23,59,59,999);
+      break;
     case 'week':
-      start = new Date(end);
-      start.setDate(end.getDate() - 7);
-      start.setHours(0, 0, 0, 0);
+      start = new Date(now);
+      start.setDate(now.getDate() - 7);
+      start.setHours(0,0,0,0);
       break;
     default:
-      return items;
+      return null;
   }
-  return filterByDateRange(items, dateField, start, end);
+  return { from: start, to: end };
 }
 
-// נתוני הדשבורד
+// קובצי הדשבורד שלנו
 const cardsData = [
-  { label: 'תקלות השבוע',    count: filterByDateRange(tickets, 'opened_at', weekAgo, now).length,    route: 'tickets',    from: weekAgo,    to: now,    dateField: 'opened_at' },
-  { label: 'פעילויות השבוע', count: filterByDateRange(activities, 'expected_start', weekAgo, now).length, route: 'activities', from: weekAgo, to: now, dateField: 'expected_start' },
-  { label: 'תקלות ב-24 שעות',count: filterByDateRange(tickets, 'opened_at', yesterday, now).length,  route: 'tickets',    from: yesterday, to: now, dateField: 'opened_at' },
-  { label: 'פעילויות ב-24 שעות',count: filterByDateRange(activities, 'expected_start', yesterday, now).length, route: 'activities',from: yesterday,to: now,dateField: 'expected_start' }
+  { label: 'תקלות השבוע',       count: filterByDateRange(tickets,    'opened_at',       computeRange('week').from, computeRange('week').to).length,       route: 'tickets' },
+  { label: 'תקלות ב-24 שעות',    count: filterByDateRange(tickets,    'opened_at',       computeRange('today').from, computeRange('today').to).length,    route: 'tickets' },
+  { label: 'פעילויות השבוע',     count: filterByDateRange(activities, 'expected_start',  computeRange('week').from, computeRange('week').to).length,     route: 'activities' },
+  { label: 'פעילויות ב-24 שעות', count: filterByDateRange(activities, 'expected_start',  computeRange('today').from, computeRange('today').to).length, route: 'activities' }
 ];
 
-/**
- * מציג את הדשבורד ומסתיר את רשימות והפילטרים
- */
+/** מציג את הדשבורד */
 function showDashboard() {
   document.getElementById('dashboard').classList.remove('hidden');
   document.getElementById('list-view').classList.add('hidden');
@@ -73,132 +63,126 @@ function showDashboard() {
   );
 }
 
-/**
- * מציג רשימות עם חיפוש, סטטוס, יחידה, סוג ובתקלות – סינון לפי תאריך
- */
+/** מציג ועורך את הרשימה לפי route */
 function showListRoute(route) {
-  const listView = document.getElementById('list-view');
-  const filterContainer = document.getElementById('filter-container');
-
-  // הסתרת הדשבורד והצגת הרשימה והפילטרים
-  document.getElementById('dashboard').classList.add('hidden');
-  listView.classList.remove('hidden');
-  filterContainer.classList.remove('hidden');
-
-  // הגדרת נתונים ושדות
   const items       = route === 'tickets' ? tickets    : activities;
   const dateField   = route === 'tickets' ? 'opened_at' : 'expected_start';
   const statusField = route === 'tickets' ? 'state'     : 'u_state';
   const unitField   = 'u_unit';
   const typeField   = 'u_type_change';
 
-  // קביעת טווח לפי הכרטיס
-  const cardConfig = cardsData.find(c => c.route === route && c.dateField === dateField);
-  const from       = cardConfig ? cardConfig.from : weekAgo;
-  const to         = now;
+  // למקרה שרוצים filter-container & list-view
+  document.getElementById('dashboard').classList.add('hidden');
+  const listView       = document.getElementById('list-view');
+  const filterContainer = document.getElementById('filter-container');
+  listView.classList.remove('hidden');
+  filterContainer.classList.remove('hidden');
 
-  // סינון ראשוני ומיון
-  let baseFiltered = filterByDateRange(items, dateField, from, to);
-  baseFiltered     = sortByDateDesc(baseFiltered, dateField);
-
-  // משתני פילטר
+  // הפילטרים בדינמיקה
+  let searchQuery = '';
   let currentStatus = '';
-  let currentUnit   = '';
-  let currentType   = '';
-  let datePreset    = '';
-  let searchQuery   = '';
+  let currentUnit = '';
+  let currentType = '';
+  let datePreset = '';
 
-  // פונקציה לעדכון הרשימה לפי כל הפילטרים
+  // הפונקציה שמעדכנת ומציגה
   function updateList() {
-    let filtered = baseFiltered;
-    // סינון לפי תאריך רק בתקלות
+    let filtered = items.slice(); // start from raw
+
+    // סינון תאריכים
     if (route === 'tickets') {
+      // תקלות לפי opened_at
       filtered = filterByDatePreset(filtered, dateField, datePreset);
+    } else { // activities
+      if (datePreset) {
+        const range = computeRange(datePreset);
+        filtered = filtered.filter(item => {
+          const start = new Date(item.expected_start);
+          const endD  = new Date(item.u_end_date);
+          return start <= range.to && endD >= range.from;
+        });
+      }
     }
-    if (currentStatus) filtered = filterByStatus(filtered, statusField, currentStatus);
-    if (currentUnit)   filtered = filterByStatus(filtered, unitField,   currentUnit);
-    if (currentType && route === 'activities') {
-      filtered = filterByStatus(filtered, typeField, currentType);
-    }
+
+    // חיפוש free-text על number
     if (searchQuery) {
       filtered = filtered.filter(item =>
         item.number.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
+
+    // פילטר סטטוס
+    if (currentStatus) {
+      filtered = filterByStatus(filtered, statusField, currentStatus);
+    }
+
+    // פילטר יחידה
+    if (currentUnit) {
+      filtered = filterByStatus(filtered, unitField, currentUnit);
+    }
+
+    // פילטר סוג (רק ב-activities)
+    if (route === 'activities' && currentType) {
+      filtered = filterByStatus(filtered, typeField, currentType);
+    }
+
+    // מיון לפי תאריך יורד
+    filtered = sortByDateDesc(filtered, dateField);
+
     renderList(filtered, route === 'tickets' ? 'ticket' : 'activity');
   }
 
-  // איפוס הפילטרים
+  // בונים את ממשק הפילטרים
   filterContainer.innerHTML = '';
 
-  // שורת חיפוש
+  // 1. search
   const searchInput = document.createElement('input');
   searchInput.type = 'search';
   searchInput.placeholder = 'חפש לפי מספר';
-  searchInput.addEventListener('input', e => {
-    searchQuery = e.target.value.trim();
-    updateList();
-  });
+  searchInput.addEventListener('input', e => { searchQuery = e.target.value.trim(); updateList(); });
   filterContainer.appendChild(searchInput);
 
-  // פילטר תאריך פתיחה רק בתקלות
-  if (route === 'tickets') {
-    const dateDiv = document.createElement('div');
-    dateDiv.id = 'date-filter';
-    filterContainer.appendChild(dateDiv);
-    const select = document.createElement('select');
-    select.innerHTML = `
-      <option value="">הכל</option>
-      <option value="today">היום</option>
-      <option value="yesterday">אתמול</option>
-      <option value="week">השבוע</option>
-    `;
-    select.addEventListener('change', e => {
-      datePreset = e.target.value;
-      updateList();
-    });
-    dateDiv.appendChild(select);
-  }
+  // 2. date preset selector
+  const dateDiv = document.createElement('div');
+  const dateSel = document.createElement('select');
+  dateSel.innerHTML = `
+    <option value="">הכל</option>
+    <option value="today">היום</option>
+    <option value="yesterday">אתמול</option>
+    <option value="week">השבוע</option>
+  `;
+  dateSel.addEventListener('change', e => { datePreset = e.target.value; updateList(); });
+  dateDiv.appendChild(dateSel);
+  filterContainer.appendChild(dateDiv);
 
-  // פילטר סטטוסים
-  const statuses = getUniqueValues(baseFiltered, statusField);
+  // 3. status
+  const statuses = getUniqueValues(items, statusField);
   const statusDiv = document.createElement('div');
   statusDiv.id = 'status-filter';
   filterContainer.appendChild(statusDiv);
-  renderFilters(statuses, 'status-filter', value => {
-    currentStatus = value;
-    updateList();
-  });
+  renderFilters(statuses, 'status-filter', v => { currentStatus = v; updateList(); });
 
-  // פילטר יחידות
-  const units = getUniqueValues(baseFiltered, unitField);
+  // 4. unit
+  const units = getUniqueValues(items, unitField);
   const unitDiv = document.createElement('div');
   unitDiv.id = 'unit-filter';
   filterContainer.appendChild(unitDiv);
-  renderFilters(units, 'unit-filter', value => {
-    currentUnit = value;
-    updateList();
-  });
+  renderFilters(units, 'unit-filter', v => { currentUnit = v; updateList(); });
 
-  // פילטר סוג פעילות
+  // 5. type (activities only)
   if (route === 'activities') {
-    const types = getUniqueValues(baseFiltered, typeField);
+    const types = getUniqueValues(items, typeField);
     const typeDiv = document.createElement('div');
     typeDiv.id = 'type-filter';
     filterContainer.appendChild(typeDiv);
-    renderFilters(types, 'type-filter', value => {
-      currentType = value;
-      updateList();
-    });
+    renderFilters(types, 'type-filter', v => { currentType = v; updateList(); });
   }
 
-  // רינדור ראשוני
+  // הצגה ראשונית
   updateList();
 }
 
-/**
- * ניהול ניווט מבוסס hash
- */
+/** ניהול ניווט מבוסס hash */
 function navigate() {
   const hash = window.location.hash.slice(1) || 'dashboard';
   if (hash === 'dashboard') {
@@ -208,8 +192,13 @@ function navigate() {
   }
 }
 
-// אתחול האפליקציה
+// מאזינים
 window.addEventListener('hashchange', navigate);
-document.addEventListener('DOMContentLoaded', () => {
-  navigate();
-});
+document.addEventListener('DOMContentLoaded', navigate);
+
+/** מייביא את הפונקציה של תקלות מ־filters.js **/
+function filterByDatePreset(items, field, preset) {
+  if (!preset) return items;
+  const range = computeRange(preset);
+  return filterByDateRange(items, field, range.from, range.to);
+}
