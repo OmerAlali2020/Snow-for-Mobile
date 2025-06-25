@@ -73,7 +73,7 @@ nav .nav-list a {
   font-size: 1rem;
 }
 
-/* Select Filter */
+/* Select Filters (Status, Unit, Type) */
 #filter-container select {
   flex: 1 1 150px;
   padding: 8px 12px;

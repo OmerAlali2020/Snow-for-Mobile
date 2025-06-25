@@ -74,7 +74,7 @@ function showDashboard() {
 }
 
 /**
- * מציג את רשימת התקלות או הפעילויות עם פילטר חיפוש, סטטוס ויחידה
+ * מציג את רשימת התקלות או הפעילויות עם פילטר חיפוש, סטטוס, יחידה וסוג פעילות
  */
 function showListRoute(route) {
   const listView = document.getElementById('list-view');
@@ -86,34 +86,38 @@ function showListRoute(route) {
   filterContainer.classList.remove('hidden');
 
   // קביעת מקורות הנתונים והשדות
-  const items = route === 'tickets' ? tickets : activities;
-  const dateField = route === 'tickets' ? 'opened_at' : 'expected_start';
-  const statusField = route === 'tickets' ? 'state' : 'u_state';
-  const unitField = 'u_unit';
+  const items       = route === 'tickets' ? tickets    : activities;
+  const dateField   = route === 'tickets' ? 'opened_at' : 'expected_start';
+  const statusField = route === 'tickets' ? 'state'     : 'u_state';
+  const unitField   = 'u_unit';
+  const typeField   = 'u_type_change'; // שדה סוג הפעילות
 
   // קביעת הטווח לפי הכרטיס בדשבורד
   const cardConfig = cardsData.find(c => c.route === route && c.dateField === dateField);
   const from = cardConfig ? cardConfig.from : weekAgo;
-  const to = now;
+  const to   = now;
 
   // סינון ומיון ראשוני לפי תאריך
   let baseFiltered = filterByDateRange(items, dateField, from, to);
-  baseFiltered = sortByDateDesc(baseFiltered, dateField);
+  baseFiltered     = sortByDateDesc(baseFiltered, dateField);
 
   // משתני פילטר
   let currentStatus = '';
-  let currentUnit = '';
-  let searchQuery = '';
+  let currentUnit   = '';
+  let currentType   = '';
+  let searchQuery   = '';
 
   // פונקציה לעדכון הרשימה בהתאם לפילטרים
   function updateList() {
     let filtered = baseFiltered;
     if (currentStatus) filtered = filterByStatus(filtered, statusField, currentStatus);
-    if (currentUnit) filtered = filterByStatus(filtered, unitField, currentUnit);
-    if (searchQuery) {
-      filtered = filtered.filter(item =>
-        item.number.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+    if (currentUnit)   filtered = filterByStatus(filtered, unitField,   currentUnit);
+    if (searchQuery)   filtered = filtered.filter(item =>
+                           item.number.toLowerCase().includes(searchQuery.toLowerCase())
+                         );
+    // סינון לפי סוג פעילות (רק ב-activities)
+    if (route === 'activities' && currentType) {
+      filtered = filterByStatus(filtered, typeField, currentType);
     }
     renderList(filtered, route === 'tickets' ? 'ticket' : 'activity');
   }
@@ -150,6 +154,18 @@ function showListRoute(route) {
     currentUnit = value;
     updateList();
   });
+
+  // פילטר סוג פעילות (רק ב-activities)
+  if (route === 'activities') {
+    const types = getUniqueValues(baseFiltered, typeField);
+    const typeDiv = document.createElement('div');
+    typeDiv.id = 'type-filter';
+    filterContainer.appendChild(typeDiv);
+    renderFilters(types, 'type-filter', value => {
+      currentType = value;
+      updateList();
+    });
+  }
 
   // רינדור ראשוני
   updateList();
