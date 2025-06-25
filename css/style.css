@@ -73,13 +73,22 @@ nav .nav-list a {
   font-size: 1rem;
 }
 
-/* Select Filters (Status, Unit, Type) */
+/* Select Filters (Status, Unit, Type, Date) */
 #filter-container select {
   flex: 1 1 150px;
   padding: 8px 12px;
   border: 1px solid #ccc;
   border-radius: 8px;
   font-size: 1rem;
+}
+
+/* Specific styling for date filter container */
+#date-filter {
+  display: flex;
+  align-items: center;
+}
+#date-filter select {
+  flex: 1 1 150px;
 }
 
 /* Card Base */
@@ -118,5 +127,9 @@ nav .nav-list a {
 @media (max-width: 480px) {
   #dashboard {
     grid-template-columns: 1fr 1fr;
+  }
+  #filter-container input[type="search"],
+  #filter-container select {
+    flex: 1 1 100%;
   }
 }
