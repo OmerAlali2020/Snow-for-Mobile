@@ -57,62 +57,79 @@ const cardsData = [
 ];
 
 /**
- * מציג את הדשבורד ומסתיר את רשימת התקלות/פעילויות והפילטר
+ * מציג את הדשבורד ומסתיר את רשימת התקלות והפילטרים
  */
 function showDashboard() {
   document.getElementById('dashboard').classList.remove('hidden');
   document.getElementById('list-view').classList.add('hidden');
   document.getElementById('filter-container').classList.add('hidden');
 
-  renderDashboard(cardsData.map(card => ({
-    label: card.label,
-    count: card.count,
-    onClick: () => {
-      window.location.hash = `#${card.route}`;
-    }
-  })));
+  renderDashboard(
+    cardsData.map(card => ({
+      label: card.label,
+      count: card.count,
+      onClick: () => (window.location.hash = `#${card.route}`)
+    }))
+  );
 }
 
 /**
- * מציג את רשימת התקלות או הפעילויות עם שני פילטרים: סטטוס ויחידה
+ * מציג את רשימת התקלות או הפעילויות עם פילטר חיפוש, סטטוס ויחידה
  */
 function showListRoute(route) {
-  // כיבוי ומשיכת אלמנטים
   const listView = document.getElementById('list-view');
   const filterContainer = document.getElementById('filter-container');
+
+  // הצגה/הסתרה של מקטעים
   document.getElementById('dashboard').classList.add('hidden');
   listView.classList.remove('hidden');
   filterContainer.classList.remove('hidden');
 
-  // קביעת מקור ונתוני טווח הזמן
+  // קביעת מקורות הנתונים והשדות
   const items = route === 'tickets' ? tickets : activities;
   const dateField = route === 'tickets' ? 'opened_at' : 'expected_start';
   const statusField = route === 'tickets' ? 'state' : 'u_state';
   const unitField = 'u_unit';
 
-  // איפוס הטווח בהתאם לכרטיס בדשבורד
-  const card = cardsData.find(c => c.route === route && c.dateField === dateField && c.from && c.to);
-  const from = card ? card.from : weekAgo;
+  // קביעת הטווח לפי הכרטיס בדשבורד
+  const cardConfig = cardsData.find(c => c.route === route && c.dateField === dateField);
+  const from = cardConfig ? cardConfig.from : weekAgo;
   const to = now;
 
-  // סינון בסיסי ומיון לפי תאריך
+  // סינון ומיון ראשוני לפי תאריך
   let baseFiltered = filterByDateRange(items, dateField, from, to);
   baseFiltered = sortByDateDesc(baseFiltered, dateField);
 
-  // שמירת ערכי הפילטר הנוכחיים
+  // משתני פילטר
   let currentStatus = '';
   let currentUnit = '';
+  let searchQuery = '';
 
-  // פונקציה למעודכן הרשימה לפי שני הפילטרים
+  // פונקציה לעדכון הרשימה בהתאם לפילטרים
   function updateList() {
     let filtered = baseFiltered;
     if (currentStatus) filtered = filterByStatus(filtered, statusField, currentStatus);
     if (currentUnit) filtered = filterByStatus(filtered, unitField, currentUnit);
+    if (searchQuery) {
+      filtered = filtered.filter(item =>
+        item.number.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
     renderList(filtered, route === 'tickets' ? 'ticket' : 'activity');
   }
 
-  // איפוס תוכן פילטר
+  // נקה תוכן הפילטרים
   filterContainer.innerHTML = '';
+
+  // שורת חיפוש
+  const searchInput = document.createElement('input');
+  searchInput.type = 'search';
+  searchInput.placeholder = 'חפש לפי מספר';
+  searchInput.addEventListener('input', e => {
+    searchQuery = e.target.value.trim();
+    updateList();
+  });
+  filterContainer.appendChild(searchInput);
 
   // פילטר סטטוסים
   const statuses = getUniqueValues(baseFiltered, statusField);
@@ -134,7 +151,7 @@ function showListRoute(route) {
     updateList();
   });
 
-  // הצגה ראשונית של הרשימה
+  // רינדור ראשוני
   updateList();
 }
 
