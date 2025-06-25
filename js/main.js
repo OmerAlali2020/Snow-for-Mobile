@@ -57,59 +57,91 @@ const cardsData = [
 ];
 
 /**
- * הצגת דשבורד
+ * מציג את הדשבורד ומסתיר את רשימת התקלות/פעילויות והפילטר
  */
 function showDashboard() {
   document.getElementById('dashboard').classList.remove('hidden');
   document.getElementById('list-view').classList.add('hidden');
   document.getElementById('filter-container').classList.add('hidden');
+
   renderDashboard(cardsData.map(card => ({
     label: card.label,
     count: card.count,
     onClick: () => {
       window.location.hash = `#${card.route}`;
-      // when hash changes, navigate() will handle showList
     }
   })));
 }
 
 /**
- * הצגת רשימה לפי נתיב ('tickets' או 'activities')
+ * מציג את רשימת התקלות או הפעילויות עם שני פילטרים: סטטוס ויחידה
  */
 function showListRoute(route) {
-  // קביעת מקורות
+  // כיבוי ומשיכת אלמנטים
+  const listView = document.getElementById('list-view');
+  const filterContainer = document.getElementById('filter-container');
+  document.getElementById('dashboard').classList.add('hidden');
+  listView.classList.remove('hidden');
+  filterContainer.classList.remove('hidden');
+
+  // קביעת מקור ונתוני טווח הזמן
   const items = route === 'tickets' ? tickets : activities;
   const dateField = route === 'tickets' ? 'opened_at' : 'expected_start';
-  const from = cardsData.find(c => c.route === route && c.from === weekAgo)?.from || weekAgo;
+  const statusField = route === 'tickets' ? 'state' : 'u_state';
+  const unitField = 'u_unit';
+
+  // איפוס הטווח בהתאם לכרטיס בדשבורד
+  const card = cardsData.find(c => c.route === route && c.dateField === dateField && c.from && c.to);
+  const from = card ? card.from : weekAgo;
   const to = now;
 
-  // מסנן וממיין
-  let filtered = filterByDateRange(items, dateField, from, to);
-  filtered = sortByDateDesc(filtered, dateField);
+  // סינון בסיסי ומיון לפי תאריך
+  let baseFiltered = filterByDateRange(items, dateField, from, to);
+  baseFiltered = sortByDateDesc(baseFiltered, dateField);
 
-  // רינדור פילטר סטטוסים
-  const statusField = route === 'tickets' ? 'state' : 'u_state';
-  const statuses = getUniqueValues(filtered, statusField);
-  renderFilters(statuses, 'filter-container', (value) => {
-    const byStatus = filterByStatus(filtered, statusField, value);
-    renderList(byStatus, route === 'tickets' ? 'ticket' : 'activity');
+  // שמירת ערכי הפילטר הנוכחיים
+  let currentStatus = '';
+  let currentUnit = '';
+
+  // פונקציה למעודכן הרשימה לפי שני הפילטרים
+  function updateList() {
+    let filtered = baseFiltered;
+    if (currentStatus) filtered = filterByStatus(filtered, statusField, currentStatus);
+    if (currentUnit) filtered = filterByStatus(filtered, unitField, currentUnit);
+    renderList(filtered, route === 'tickets' ? 'ticket' : 'activity');
+  }
+
+  // איפוס תוכן פילטר
+  filterContainer.innerHTML = '';
+
+  // פילטר סטטוסים
+  const statuses = getUniqueValues(baseFiltered, statusField);
+  const statusDiv = document.createElement('div');
+  statusDiv.id = 'status-filter';
+  filterContainer.appendChild(statusDiv);
+  renderFilters(statuses, 'status-filter', value => {
+    currentStatus = value;
+    updateList();
   });
 
-  // רינדור ראשוני של הרשימה
-  renderList(filtered, route === 'tickets' ? 'ticket' : 'activity');
-  document.getElementById('dashboard').classList.add('hidden');
-  const listView = document.getElementById('list-view');
-  listView.classList.remove('hidden');
-  document.getElementById('filter-container').classList.remove('hidden');
+  // פילטר יחידות
+  const units = getUniqueValues(baseFiltered, unitField);
+  const unitDiv = document.createElement('div');
+  unitDiv.id = 'unit-filter';
+  filterContainer.appendChild(unitDiv);
+  renderFilters(units, 'unit-filter', value => {
+    currentUnit = value;
+    updateList();
+  });
 
+  // הצגה ראשונית של הרשימה
+  updateList();
 }
 
 /**
- * ניהול ניווט על בסיס hash
+ * ניהול ניווט מבוסס hash
  */
 function navigate() {
-    console.log('navigate() called, hash=', window.location.hash);
-
   const hash = window.location.hash.slice(1) || 'dashboard';
   if (hash === 'dashboard') {
     showDashboard();
@@ -118,12 +150,8 @@ function navigate() {
   }
 }
 
-// התחלת האפליקציה
+// אתחול האפליקציה
 window.addEventListener('hashchange', navigate);
 document.addEventListener('DOMContentLoaded', () => {
-  // צור מכולת לפילטר לפני list-view
-  const filterContainer = document.createElement('div');
-  filterContainer.id = 'filter-container';
-  document.getElementById('list-view').before(filterContainer);
   navigate();
 });
