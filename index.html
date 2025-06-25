@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="he">
+<html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>מנהל תקלות ופעילויות</title>
+  <title>מצב המחלקה</title>
   <!-- גוגל פונט Roboto -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
@@ -11,19 +11,34 @@
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
+  <!-- ניווט בין עמודים -->
+  <nav>
+    <ul class="nav-list">
+      <li><a href="#dashboard">דשבורד</a></li>
+      <li><a href="#tickets">תקלות</a></li>
+      <li><a href="#activities">פעילויות</a></li>
+    </ul>
+  </nav>
+
+  <!-- כותרת ראשית -->
   <header>
     <h1>מצב המחלקה</h1>
   </header>
 
-  <main>
-    <!-- דשבורד עם קוביות סכימה -->
-    <section id="dashboard"></section>
+  <!-- אזור הדשבורד -->
+  <section id="dashboard" class="view-section">
+    <!-- ימולא בדינמיקה על ידי renderDashboard() -->
+  </section>
 
-    <!-- כאן יופיעו רשימת תקלות או פעילויות -->
-    <section id="list-view" class="hidden"></section>
-  </main>
+  <!-- מכולת לפילטר סטטוסים -->
+  <div id="filter-container"></div>
 
-  <!-- סקריפט הראשי -->
+  <!-- אזור הרשימה (תקלות/פעילויות) -->
+  <section id="list-view" class="view-section hidden">
+    <!-- ימולא בדינמיקה על ידי renderList() -->
+  </section>
+
+  <!-- סקריפט המודול הראשי -->
   <script type="module" src="js/main.js"></script>
 </body>
 </html>

@@ -13,77 +13,117 @@ import {
   renderList
 } from './render.js';
 
-function init() {
-  const allTickets = tickets;
-  const allActivities = activities;
+// חישוב תאריכים
+const now = new Date();
+const weekAgo = new Date(now);
+weekAgo.setDate(now.getDate() - 7);
+const yesterday = new Date(now);
+yesterday.setDate(now.getDate() - 1);
 
-  const now = new Date();
-  const weekAgo = new Date(now);
-  weekAgo.setDate(now.getDate() - 7);
-  const yesterday = new Date(now);
-  yesterday.setDate(now.getDate() - 1);
+// נתוני הדשבורד
+const cardsData = [
+  {
+    label: 'תקלות השבוע',
+    count: filterByDateRange(tickets, 'opened_at', weekAgo, now).length,
+    route: 'tickets',
+    from: weekAgo,
+    to: now,
+    dateField: 'opened_at'
+  },
+  {
+    label: 'פעילויות השבוע',
+    count: filterByDateRange(activities, 'expected_start', weekAgo, now).length,
+    route: 'activities',
+    from: weekAgo,
+    to: now,
+    dateField: 'expected_start'
+  },
+  {
+    label: 'תקלות ב-24 שעות',
+    count: filterByDateRange(tickets, 'opened_at', yesterday, now).length,
+    route: 'tickets',
+    from: yesterday,
+    to: now,
+    dateField: 'opened_at'
+  },
+  {
+    label: 'פעילויות ב-24 שעות',
+    count: filterByDateRange(activities, 'expected_start', yesterday, now).length,
+    route: 'activities',
+    from: yesterday,
+    to: now,
+    dateField: 'expected_start'
+  }
+];
 
-  // הגדרת כרטיסי הדשבורד
-  const cardsData = [
-    {
-      label: 'תקלות השבוע',
-      count: filterByDateRange(allTickets, 'opened_at', weekAgo, now).length,
-      onClick: () => showList('ticket', allTickets, 'opened_at', weekAgo, now),
-    },
-    {
-      label: 'פעילויות השבוע',
-      count: filterByDateRange(allActivities, 'expected_start', weekAgo, now).length,
-      onClick: () => showList('activity', allActivities, 'expected_start', weekAgo, now),
-    },
-    {
-      label: 'תקלות ב-24 שעות',
-      count: filterByDateRange(allTickets, 'opened_at', yesterday, now).length,
-      onClick: () => showList('ticket', allTickets, 'opened_at', yesterday, now),
-    },
-    {
-      label: 'פעילויות ב-24 שעות',
-      count: filterByDateRange(allActivities, 'expected_start', yesterday, now).length,
-      onClick: () => showList('activity', allActivities, 'expected_start', yesterday, now),
-    },
-  ];
-
-  // הצגת הדשבורד
-  renderDashboard(cardsData);
-
-  // מסתיר את ה-list-view עד ללחיצה
+/**
+ * הצגת דשבורד
+ */
+function showDashboard() {
+  document.getElementById('dashboard').classList.remove('hidden');
   document.getElementById('list-view').classList.add('hidden');
-
-  // יוצר מכולת לפילטר סטטוסים מעל ה-list-view
-  const filterContainer = document.createElement('div');
-  filterContainer.id = 'filter-container';
-  document.getElementById('list-view').before(filterContainer);
+  document.getElementById('filter-container').classList.add('hidden');
+  renderDashboard(cardsData.map(card => ({
+    label: card.label,
+    count: card.count,
+    onClick: () => {
+      window.location.hash = `#${card.route}`;
+      // when hash changes, navigate() will handle showList
+    }
+  })));
 }
 
-// מציג את רשימת התקלות או הפעילויות בהתאם לבחירה
-function showList(type, items, dateField, from, to) {
-  const listView = document.getElementById('list-view');
-  const filterContainer = document.getElementById('filter-container');
-  listView.innerHTML = '';
-  filterContainer.innerHTML = '';
+/**
+ * הצגת רשימה לפי נתיב ('tickets' או 'activities')
+ */
+function showListRoute(route) {
+  // קביעת מקורות
+  const items = route === 'tickets' ? tickets : activities;
+  const dateField = route === 'tickets' ? 'opened_at' : 'expected_start';
+  const from = cardsData.find(c => c.route === route && c.from === weekAgo)?.from || weekAgo;
+  const to = now;
 
-  // מסנן וממיין לפי תאריך
+  // מסנן וממיין
   let filtered = filterByDateRange(items, dateField, from, to);
   filtered = sortByDateDesc(filtered, dateField);
 
   // רינדור פילטר סטטוסים
-  const statusField = type === 'ticket' ? 'state' : 'u_state';
+  const statusField = route === 'tickets' ? 'state' : 'u_state';
   const statuses = getUniqueValues(filtered, statusField);
   renderFilters(statuses, 'filter-container', (value) => {
     const byStatus = filterByStatus(filtered, statusField, value);
-    renderList(byStatus, type);
+    renderList(byStatus, route === 'tickets' ? 'ticket' : 'activity');
   });
 
-  // הצגת הרשימה הראשונית
-  renderList(filtered, type);
-
-  // מוודא שה-list-view מוצג
+  // רינדור ראשוני של הרשימה
+  renderList(filtered, route === 'tickets' ? 'ticket' : 'activity');
+  document.getElementById('dashboard').classList.add('hidden');
+  const listView = document.getElementById('list-view');
   listView.classList.remove('hidden');
+  document.getElementById('filter-container').classList.remove('hidden');
+
 }
 
-// מאתחל את האפליקציה כש-DOM מוכן
-document.addEventListener('DOMContentLoaded', init);
+/**
+ * ניהול ניווט על בסיס hash
+ */
+function navigate() {
+    console.log('navigate() called, hash=', window.location.hash);
+
+  const hash = window.location.hash.slice(1) || 'dashboard';
+  if (hash === 'dashboard') {
+    showDashboard();
+  } else if (hash === 'tickets' || hash === 'activities') {
+    showListRoute(hash);
+  }
+}
+
+// התחלת האפליקציה
+window.addEventListener('hashchange', navigate);
+document.addEventListener('DOMContentLoaded', () => {
+  // צור מכולת לפילטר לפני list-view
+  const filterContainer = document.createElement('div');
+  filterContainer.id = 'filter-container';
+  document.getElementById('list-view').before(filterContainer);
+  navigate();
+});

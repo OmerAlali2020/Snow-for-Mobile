@@ -57,7 +57,7 @@
   
   /* 5. Hidden Class */
   .hidden {
-    display: none;
+    display: none !important;
   }
   
   /* 6. List View */
