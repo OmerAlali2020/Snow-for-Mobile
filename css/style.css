@@ -133,3 +133,28 @@ nav .nav-list a {
     flex: 1 1 100%;
   }
 }
+
+/* 1. הכפתור יהפוך ל-pointer כדי להבהיר שניתן ללחוץ */
+.list-card.card {
+  cursor: pointer;
+}
+
+/* 2. עיצוב המידע הנוסף שמתחת לכרטיס כשהוא נפתח */
+.extra-info {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  color: #555;
+  white-space: pre-wrap; /* ישמור על פורמט JSON */
+}
+
+/* 3. הדגשה קלה לכרטיס בסטייט “מפותח” */
+.list-card.card.expanded {
+  background-color: #f0f8ff;
+  border: 1px solid var(--color-primary);
+}
+/* Force filter labels to sit above their select */
+#filter-container label {
+  display: block;
+  margin-bottom: 0.25rem; /* רווח קטן מתחת לטקסט */
+  font-weight: 500;       /* אופציונלי – להדגשה קלה */
+}
