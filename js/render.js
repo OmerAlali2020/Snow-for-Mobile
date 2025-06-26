@@ -35,7 +35,7 @@ export function renderFilters(statuses, containerId, onChange) {
   const labelMap = {
     'status-filter': 'סטטוס',
     'unit-filter': 'יחידה',
-    'type-filter': 'סוג שינוי'
+    'type-filter': 'סוג פעילות'
   };
   const labelText = labelMap[containerId] || '';
   if (labelText) {
@@ -110,7 +110,8 @@ export function renderList(items, type) {
       u_unit: 'יחידה',
       business_service: 'שירות',
       u_impact: 'השפעה',
-      sys_updated_on: 'עודכן ב־'
+      sys_updated_on: 'עודכן ב־',
+      u_type_change: 'סוג פעילות'
     };
 
     // הוספת שדות נוספים שלא הוצגו קודם
