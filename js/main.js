@@ -42,10 +42,41 @@ function computeRange(preset) {
 
 // קובצי הדשבורד שלנו
 const cardsData = [
-  { label: 'תקלות השבוע',       count: filterByDateRange(tickets,    'opened_at',       computeRange('week').from, computeRange('week').to).length,       route: 'tickets' },
-  { label: 'תקלות ב-24 שעות',    count: filterByDateRange(tickets,    'opened_at',       computeRange('today').from, computeRange('today').to).length,    route: 'tickets' },
-  { label: 'פעילויות השבוע',     count: filterByDateRange(activities, 'expected_start',  computeRange('week').from, computeRange('week').to).length,     route: 'activities' },
-  { label: 'פעילויות ב-24 שעות', count: filterByDateRange(activities, 'expected_start',  computeRange('today').from, computeRange('today').to).length, route: 'activities' }
+  {
+    label: 'תקלות שנפתחו ב-24 שעות האחרונות',
+    count: tickets.filter(t => {
+      const d = new Date(t.opened_at);
+      const now = new Date();
+      const from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      return d >= from && d <= now && t.state === 'נפתח';
+    }).length,
+    route: 'tickets'
+  },
+  {
+    label: 'תקלות שנסגרו ב-24 שעות האחרונות',
+    count: tickets.filter(t => {
+      const d = new Date(t.sys_updated_on);
+      const now = new Date();
+      const from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      return d >= from && d <= now && (t.state === 'נפתר' || t.state === 'הסתיים');
+    }).length,
+    route: 'tickets'
+  },
+  {
+    label: 'פעילויות בביצוע',
+    count: activities.filter(a => a.u_state === 'בתהליך').length,
+    route: 'activities'
+  },
+  {
+    label: 'פעילויות שהסתיימו ב-24 שעות האחרונות',
+    count: activities.filter(a => {
+      const dEnd = new Date(a.u_end_date);
+      const now = new Date();
+      const from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      return dEnd >= from && dEnd <= now && a.u_state === 'הסתיים';
+    }).length,
+    route: 'activities'
+  }
 ];
 
 /** מציג את הדשבורד */
