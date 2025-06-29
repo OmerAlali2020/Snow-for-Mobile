@@ -25,17 +25,17 @@ export const tickets = [
   {
     number: "INC0030003",
     short_description: "תקלה ברשת פנימית",
-    state: "נפתר",
+    state: "הסתיים",
     opened_at: "2025-06-27T22:00:00Z",
     u_unit: "תקשוב",
     business_service: "LAN",
     u_impact: "השבתה חלקית",
-    sys_updated_on: "2025-06-28T08:30:00Z"
+    sys_updated_on: "2025-06-28T14:20:00Z"
   },
   {
     number: "INC0030004",
     short_description: "עדכון גיבוי כושל",
-    state: "הסתיים",
+    state: "נפתר",
     opened_at: "2025-06-27T20:00:00Z",
     u_unit: "אחזקה",
     business_service: "Backup Service",
