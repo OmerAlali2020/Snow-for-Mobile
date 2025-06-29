@@ -74,8 +74,8 @@ const cardsData = [
   {
     label: 'פעילויות בביצוע',
     route: 'activities',
-    filters: { statuses: ['בתהליך'] },
-    count: activities.filter(a => a.u_state === 'בתהליך').length
+    filters: { statuses: ['בביצוע'] },
+    count: activities.filter(a => a.u_state === 'בביצוע').length
   },
   {
     label: 'פעילויות שהסתיימו ב-24 שעות האחרונות',
